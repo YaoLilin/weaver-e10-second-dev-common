@@ -55,7 +55,7 @@ public class FormInfoServiceImpl implements FormInfoService {
         List<Object> params = new ArrayList<>();
         params.add(tableName);
         if (CharSequenceUtil.isNotBlank(tenantKey)) {
-            addTenantKeyCondition(tenantKey, sql, params, null);
+            sql = addTenantKeyCondition(tenantKey, sql, params, null);
         }
 
         SqlExecuteResult result = sqlExecuteClient.executeSql(groupType,
@@ -73,7 +73,7 @@ public class FormInfoServiceImpl implements FormInfoService {
         List<Object> params = new ArrayList<>();
         params.add(subFormTableName);
         if (CharSequenceUtil.isNotBlank(tenantKey)) {
-            addTenantKeyCondition(tenantKey, sql, params, null);
+            sql = addTenantKeyCondition(tenantKey, sql, params, null);
         }
 
         SqlExecuteResult result = sqlExecuteClient.executeSql(groupType,
@@ -128,7 +128,7 @@ public class FormInfoServiceImpl implements FormInfoService {
 
     private boolean isEmptyRecord(SqlExecuteResult result, String sql) {
         if (!result.isSuccess()) {
-            log.error("查询表单信息失败，sql执行异常，sql:{}", sql);
+            log.error("查询表单信息失败，sql执行异常，sql:{}，信息：{}", sql, result.getMessage());
             return true;
         }
         log.debug("查询结果：{}", JSON.toJSONString(result.getRecords()));

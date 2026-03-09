@@ -1,18 +1,13 @@
 package com.weaver.seconddev.hnweaver.common.controller;
 
+import cn.hutool.core.text.CharSequenceUtil;
 import com.weaver.common.authority.annotation.WeaPermission;
 import com.weaver.common.base.entity.result.WeaResult;
 import com.weaver.seconddev.hnweaver.common.domain.param.LogLevelParam;
 import com.weaver.seconddev.hnweaver.common.service.ConfigFileService;
-
-import cn.hutool.core.text.CharSequenceUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 
 /**
@@ -25,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @WeaPermission(publicPermission = true)
 @RequiredArgsConstructor
 @Slf4j
-public class DevToolsContrller {
+public class DevToolsController {
 
     private final ConfigFileService configFileService;
 
@@ -46,7 +41,7 @@ public class DevToolsContrller {
             return WeaResult.fail(e.getMessage());
         }
     }
-    
+
     @GetMapping("/log-level")
     public WeaResult<String> getCurrentLogLevel() {
         try {
