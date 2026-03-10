@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 /**
  * @author 姚礼林
- * @desc sql 执行工具类
+ * @desc sql 执行工具类 ，可执行 sql 并返回结果
  * @date 2025/7/25
  **/
 @Component
@@ -34,6 +34,14 @@ import java.util.stream.Collectors;
 public class SqlExecuteClient {
     private final DataSetUtil dataSetUtil;
 
+    /**
+     * 执行 sql 语句，支持查询与修改（含新增）
+     *
+     * @param groupType 数据源组类型，根据执行 sql 对应的业务模块进行选择
+     * @param sql       sql 语句，可包含占位符（? 符号）
+     * @param params    sql 参数
+     * @return sql 执行结果
+     */
     public SqlExecuteResult executeSql(DatasourceGroupType groupType, String sql, SqlParam... params) {
         List<SqlParamEntity> paramEntities = new ArrayList<>();
         if (ArrayUtil.isNotEmpty(params)) {
@@ -59,6 +67,14 @@ public class SqlExecuteClient {
         return executeResult;
     }
 
+    /**
+     * 执行 sql 语句，支持查询与修改（含新增）
+     *
+     * @param groupType 数据源组类型，根据执行 sql 对应的业务模块进行选择
+     * @param sql       sql 语句，可包含占位符（? 符号）
+     * @param params    sql 参数
+     * @return sql 执行结果
+     */
     public SqlExecuteResult executeSql(DatasourceGroupType groupType, String sql, Object... params) {
         List<SqlParam> paramList = new ArrayList<>();
         if (ArrayUtil.isNotEmpty(params)) {

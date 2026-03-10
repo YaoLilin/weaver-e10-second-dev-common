@@ -2,7 +2,7 @@ package com.weaver.seconddev.hnweaver.common.constants;
 
 /**
  * @author 姚礼林
- * @desc todo
+ * @desc 数据源组类型，在 sql 执行会用到，在微服务中匹配到对应的数据库中
  * @date 2025/7/25
  **/
 public enum DatasourceGroupType {
