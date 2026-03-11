@@ -103,7 +103,7 @@ public class MessagePushToWiseduHelpAction extends AbstractEsbAction<MessagePush
 ### EbFormDataChangeClient - EB 表单数据修改客户端
 
 **路径**：`com.weaver.seconddev.hnweaver.common.EbFormDataChangeClient`  
-**说明**：EB表单数据修改客户端，用于导入和修改ebuilder表单数据。支持批量插入、更新表单数据，可根据ID、条件或条件字段进行批量更新，支持字段类型转换、文件字段转换、异步处理等功能。适用于需要批量操作表单数据的场景。
+**说明**：EB表单数据修改客户端，通过调用标准 RPC 接口进行导入和修改ebuilder表单数据。支持批量插入、更新表单数据，可根据ID、条件或条件字段进行批量更新，支持字段类型转换、文件字段转换、异步处理等功能。适用于需要批量操作表单数据的场景。
 
 **功能**：
 
@@ -112,6 +112,82 @@ public class MessagePushToWiseduHelpAction extends AbstractEsbAction<MessagePush
 - 字段转换：支持自定义字段类型转换和文件字段转换
 - 明细表处理：支持主表和明细表数据的级联更新
 - 异步处理：支持同步和异步的数据处理模式
+
+**使用示例**：
+```java
+@Autowired
+private EbFormDataChangeClient ebFormDataChangeClient;
+
+// 批量插入表单数据示例
+public void batchInsertExample(long formId) {
+    // 创建表单数据列表
+    List<FormData> formDataList = new ArrayList<>();
+    
+    // 创建第一条数据
+    FormData formData1 = new FormData();
+    formData1.setFormId(formId);
+    
+    // 设置主表字段数据
+    List<FormFieldData> mainFieldData1 = new ArrayList<>();
+    mainFieldData1.add(new FormFieldData("title", "测试标题1"));
+    mainFieldData1.add(new FormFieldData("content", "测试内容1"));
+    mainFieldData1.add(new FormFieldData("create_date", "2024-01-01"));
+    formData1.setMainFieldData(mainFieldData1);
+    
+    // 创建第二条数据
+    FormData formData2 = new FormData();
+    formData2.setFormId(formId);
+    
+    List<FormFieldData> mainFieldData2 = new ArrayList<>();
+    mainFieldData2.add(new FormFieldData("title", "测试标题2"));
+    mainFieldData2.add(new FormFieldData("content", "测试内容2"));
+    mainFieldData2.add(new FormFieldData("create_date", "2024-01-02"));
+    formData2.setMainFieldData(mainFieldData2);
+    
+    formDataList.add(formData1);
+    formDataList.add(formData2);
+    
+    // 执行批量插入
+    ResultAndMsg result = ebFormDataChangeClient.batchInsert(formDataList, formId, null);
+    if (result.isSuccess()) {
+        log.info("批量插入成功");
+    } else {
+        log.error("批量插入失败：{}", result.getMessage());
+    }
+}
+
+// 批量更新表单数据示例
+public void batchUpdateExample(long formId) {
+    // 创建要更新的数据
+    List<FormData> formDataList = new ArrayList<>();
+    
+    FormData formData = new FormData();
+    formData.setFormId(formId);
+    
+    // 设置要更新的字段（必须包含ID字段用于定位记录）
+    List<FormFieldData> mainFieldData = new ArrayList<>();
+    mainFieldData.add(new FormFieldData("id", "12345")); // 记录ID
+    mainFieldData.add(new FormFieldData("title", "更新后的标题"));
+    mainFieldData.add(new FormFieldData("status", "1")); // 状态字段
+    formData.setMainFieldData(mainFieldData);
+    
+    formDataList.add(formData);
+    
+    // 创建更新操作（按ID更新）
+    EBDataReqOperation operation = new EBDataReqOperation();
+    operation.setUpdateType(EBDataUpdateType.ids);
+    
+    // 执行批量更新
+    ResultAndMsg result = ebFormDataChangeClient.batchUpdate(
+        formDataList, formId, operation, DetailUpdateType.UPDATE, null);
+    
+    if (result.isSuccess()) {
+        log.info("批量更新成功");
+    } else {
+        log.error("批量更新失败：{}", result.getMessage());
+    }
+}
+```
 
 ### FieldInfoService - 字段信息接口
 

@@ -2,7 +2,6 @@ package com.weaver.seconddev.hnweaver.common;
 
 import cn.hutool.core.collection.CollUtil;
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.weaver.common.form.dto.enums.DataUpdatePolicy;
 import com.weaver.ebuilder.form.client.entity.data.*;
 import com.weaver.ebuilder.form.client.service.data.RemoteSimpleDataService;
@@ -36,6 +35,7 @@ import java.util.*;
 /**
  * @author 姚礼林
  * @desc 导入ebuilder表单数据，请参考 <a href="https://weapp.eteams.cn/build/techdoc/wdoc/index.html#/public/doc/c98b2645-ea0a-465e-a00c-19b36aa50c4b">数据操作相关接口</a> <br>
+ * 注意：此方式是使用 RPC 接口进行数据修改，问题可能会比较多，最好是使用 OPEN API 进行数据修改。<br>
  * 可自定义字段转换，如果 {@link FormFieldData#convertFunc} 不为空，则使用此转换函数，
  * 其次如果 {@link #fieldConvertorGroup} 不为空且存在对应的字段类型转换器，则使用此转换器，最后如果是上传字段类型字段，
  * 使用 {@link #fileFieldConvertor} 进行转换，对于文件上传类型字段，也遵循上面的优先级顺序，
