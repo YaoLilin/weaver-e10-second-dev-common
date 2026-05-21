@@ -4,6 +4,8 @@ import cn.hutool.core.text.CharSequenceUtil;
 import com.weaver.seconddev.hnweaver.common.SqlExecuteClient;
 import com.weaver.seconddev.hnweaver.common.bean.SqlExecuteResult;
 import com.weaver.seconddev.hnweaver.common.constants.DatasourceGroupType;
+import com.weaver.seconddev.hnweaver.common.domain.entity.FormEntity;
+import com.weaver.seconddev.hnweaver.common.service.FormInfoService;
 import com.weaver.seconddev.hnweaver.common.service.WorkflowInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author 姚礼林
@@ -22,6 +25,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WorkflowInfoServiceImpl implements WorkflowInfoService {
     private final SqlExecuteClient sqlExecuteClient;
+    private final FormInfoService formInfoService;
 
     @Override
     public Long getDataIdByRequestId(long requestId) {
@@ -51,6 +55,50 @@ public class WorkflowInfoServiceImpl implements WorkflowInfoService {
             log.error("dataId格式错误：{}", dataIdStr, e);
             return null;
         }
+    }
+
+    @Override
+    public Optional<Long> getFormIdByRequestId(long requestId) {
+        String sql = "SELECT formid FROM wfc_form_data WHERE requestid = ?";
+        SqlExecuteResult result = sqlExecuteClient.executeSql(
+                DatasourceGroupType.WEAVER_WORKFLOW_LIST_SERVICE, sql, requestId);
+        if (!result.isSuccess()) {
+            log.error("查询formId失败，sql：{}，错误信息：{}", sql, result.getMessage());
+            return Optional.empty();
+        }
+
+        List<Map<String, Object>> records = result.getRecords();
+        if (records.isEmpty()) {
+            log.warn("根据requestId {} 查询不到formId", requestId);
+            return Optional.empty();
+        }
+
+        String formIdStr = SqlExecuteClient.getFieldValueIgnoreCase(records.get(0), "formid");
+        if (CharSequenceUtil.isBlank(formIdStr)) {
+            log.warn("根据requestId {} 查询到的formId为空", requestId);
+            return Optional.empty();
+        }
+
+        return Optional.of(Long.parseLong(formIdStr));
+    }
+
+    @Override
+    public Optional<String> getFormTableNameByRequestId(long requestId) {
+        Optional<Long> formIdOpt = getFormIdByRequestId(requestId);
+        if (!formIdOpt.isPresent()) {
+            log.warn("无法获取requestId {} 对应的formId，无法查询表名", requestId);
+            return Optional.empty();
+        }
+
+        Long formId = formIdOpt.get();
+        Optional<FormEntity> formEntityOp = formInfoService.getFormByFormId(DatasourceGroupType.WEAVER_WORKFLOW_LIST_SERVICE,
+                formId, null);
+        if (!formEntityOp.isPresent()) {
+            log.warn("无法获取formId {} 对应的FormEntity，无法查询表名", formId);
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(formEntityOp.get().getTableName());
     }
 }
 
