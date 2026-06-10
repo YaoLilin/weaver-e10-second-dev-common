@@ -11,8 +11,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
+ * 动作流 Action 抽象类，可明确传入参数和返回参数类型，替换原来的 Map 形式。
+ *
+ * @param <T> 参数类型，由 convertToParamObj 将 Map 转换为此类型的对象
+ * @param <R> 返回数据类型，不能为基本类型包装对象（如 String、Long 等），
+ *          必需能通过 Convert.toMap() 转换为 Map&lt;String, Object&gt;，
+ *          推荐使用 Java Bean 或 Map 子类
  * @author 姚礼林
- * @desc 动作流 Action 抽象类，可明确传入参数和返回参数类型，替换原来的 Map 形式。
  * @date 2025/11/25
  **/
 @Slf4j
