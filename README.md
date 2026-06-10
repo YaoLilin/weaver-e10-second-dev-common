@@ -123,14 +123,21 @@ public class MessagePushToWiseduHelpAction extends AbstractEsbAction<MessagePush
 }
 ```
 
-**返回结果**：64 位十六进制字符串，例如 `66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4af8df`
+**返回结果**（动作流输出参数）：
+```json
+{
+    "result": "66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4af8df"
+}
+```
+
+输出参数为 `Map<String, Object>` 类型，包含一个 key 为 `result` 的 64 位十六进制 HMAC-SM3 摘要字符串。
 
 #### Action xml 文件配置
 要在配置文件配置此 Action 才能在动作流中使用。在 `/ecode/monitor/loom/deploy/jar` 页面编辑配置文件，在 beans 标签中加入：
 ```xml
-<dubbo:service ref="hmacSM3Action"
+<dubbo:service ref="HmacSM3Action"
                interface="com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface"
-               group="hmacSM3Action" />
+               group="HmacSM3Action" />
 ```
 
 ### EbFormDataChangeClient - EB 表单数据修改客户端
