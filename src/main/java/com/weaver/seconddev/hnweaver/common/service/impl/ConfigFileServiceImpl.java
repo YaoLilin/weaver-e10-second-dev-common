@@ -178,7 +178,6 @@ public class ConfigFileServiceImpl implements ConfigFileService {
             if (!found) {
                 // 没有找到现有配置，添加到最后一行
                 lines.add("");
-                lines.add("# 日志级别配置");
                 lines.add(logLevelProperty + logLevel);
                 log.info("添加新的日志级别配置: {}", logLevel);
             }

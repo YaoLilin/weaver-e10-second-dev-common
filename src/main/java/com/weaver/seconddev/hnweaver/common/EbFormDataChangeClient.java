@@ -74,6 +74,7 @@ public class EbFormDataChangeClient {
      * @param formId       表单id，对应 Form 对象的 formId
      */
     public ResultAndMsg batchInsert(List<FormData> formDataList, long formId, @Nullable SimpleEmployee operateUser) {
+        List<EBDataReqDto> dataList;
         try {
             Optional<Long> formDataIdOp = getFormDataId(formId);
             if (!formDataIdOp.isPresent()) {
@@ -81,15 +82,20 @@ public class EbFormDataChangeClient {
             }
             Long formDataId = formDataIdOp.get();
             initDataBuildHelper();
-            log.info("开始保存表单数据：{}", JSON.toJSONString(formDataList));
-            log.info("表单ID：{},表单数据id：{}", formId, formDataId);
+            log.info("表单ID：{},表单数据id：{}, 数据数量：{}", formId, formDataId, formDataList.size());
+            log.debug("开始保存表单数据：{}", JSON.toJSONString(formDataList));
 
             EBDataChangeReqDto ebDataChangeReqDto = getEBDataChangeReqDto(formDataId.toString(), operateUser);
             // 构建导入数据
-            List<EBDataReqDto> dataList = formDataBuildHelper.buildDataList(formDataList, formId);
+            long buildStart = System.currentTimeMillis();
+            dataList = formDataBuildHelper.buildDataList(formDataList, formId);
+            log.info("buildDataList 构建数据耗时：{}ms", System.currentTimeMillis() - buildStart);
             ebDataChangeReqDto.setDatas(dataList);
+            
             // 调用RPC接口保存数据
+            long rpcStart = System.currentTimeMillis();
             EBDataChangeResult result = remoteSimpleDataService.saveFormData(ebDataChangeReqDto);
+            log.info("saveFormData RPC 耗时：{}ms", System.currentTimeMillis() - rpcStart);
             log.info("rpc接口结果：{}", JSON.toJSONString(result));
             if (!result.getStatus()) {
                 log.error("保存表单数据失败，{}", result);
@@ -99,7 +105,10 @@ public class EbFormDataChangeClient {
             return new ResultAndMsg(true, "成功");
         } catch (Exception e) {
             log.error("保存表单数据失败", e);
-            return new ResultAndMsg(false, "保存表单数据发生异常");
+            return new ResultAndMsg(false, "保存表单数据发生异常："+e.getMessage());
+        } finally {
+            // 清空数据，避免内存泄漏, 因为里面包含文件上传数据
+            dataList = null;
         }
     }
 
@@ -115,6 +124,7 @@ public class EbFormDataChangeClient {
     public ResultAndMsg batchUpdate(List<FormData> formDataList, long formId,
                                     @Nullable EBDataReqOperation operation, DetailUpdateType detailUpdateType,
                                     @Nullable SimpleEmployee operateUser) {
+        List<EBDataReqDto> dataList;
         try {
             Optional<Long> formDataIdOp = getFormDataId(formId);
             if (!formDataIdOp.isPresent()) {
@@ -123,8 +133,7 @@ public class EbFormDataChangeClient {
             Long formDataId = formDataIdOp.get();
 
             initDataBuildHelper();
-            log.info("开始修改表单数据：{}", JSON.toJSONString(formDataList));
-            log.info("表单ID：{},表单数据id：{}", formId, formDataId);
+            log.info("表单ID：{},表单数据id：{}, 数据数量：{}", formId, formDataId, formDataList.size());
             EBDataReqOperation reqOperation;
             if (operation != null) {
                 reqOperation = operation;
@@ -139,12 +148,16 @@ public class EbFormDataChangeClient {
             reqOperation.setDetailDatas(detailDatas);
 
             // 构建导入数据
-            List<EBDataReqDto> dataList = formDataBuildHelper.buildDataList(formDataList, formId);
+            long buildStart = System.currentTimeMillis();
+            dataList = formDataBuildHelper.buildDataList(formDataList, formId);
+            log.info("buildDataList 构建数据耗时：{}ms", System.currentTimeMillis() - buildStart);
 
             EBDataChangeReqDto ebDataChangeReqDto = getEBDataChangeReqDto(formDataId.toString(),operateUser);
             ebDataChangeReqDto.setOperation(reqOperation);
             ebDataChangeReqDto.setDatas(dataList);
+            long rpcStart = System.currentTimeMillis();
             EBDataChangeResult result = remoteSimpleDataService.updateFormData(ebDataChangeReqDto);
+            log.info("updateFormData RPC 耗时：{}ms", System.currentTimeMillis() - rpcStart);
             log.info("rpc接口结果：{}", JSON.toJSONString(result));
             if (!result.getStatus()) {
                 log.error("修改表单数据失败，{}", result);
@@ -156,6 +169,9 @@ public class EbFormDataChangeClient {
             log.info("修改表单数据失败",e);
             log.error("修改表单数据失败", e);
             return new ResultAndMsg(false, "修改表单数据发生异常:" + e.getMessage());
+        } finally {
+            // 清空数据，避免内存泄漏, 因为里面包含文件上传数据
+            dataList = null;
         }
     }
 
@@ -315,6 +331,7 @@ public class EbFormDataChangeClient {
         if (operatorUser == null) {
             operatorUser = UserContext.getCurrentUser();
         }
+        Objects.requireNonNull(operatorUser,"用户不能为空");
         ebDataChangeReqDto.setHeader(new EBDataReqHeader(formDataId,
                 operatorUser.getEmployeeId().toString(), operatorUser.getTenantKey()));
         return ebDataChangeReqDto;
