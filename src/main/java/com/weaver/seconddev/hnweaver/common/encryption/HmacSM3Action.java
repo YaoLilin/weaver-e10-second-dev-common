@@ -1,9 +1,10 @@
 package com.weaver.seconddev.hnweaver.common.encryption;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.weaver.common.base.entity.result.WeaResult;
 import com.weaver.seconddev.hnweaver.common.AbstractEsbAction;
@@ -23,11 +24,11 @@ import lombok.Data;
  * @author 姚礼林
  * @date 2025/11/25
  */
-@Component
-public class HmacSM3Action extends AbstractEsbAction<HmacSM3Action.EncryptParam, String> {
+@Service("HmacSM3Action")
+public class HmacSM3Action extends AbstractEsbAction<HmacSM3Action.EncryptParam, Map<String, Object>> {
 
     @Override
-    protected WeaResult<String> doExecute(EncryptParam params) {
+    protected WeaResult<Map<String, Object>> doExecute(EncryptParam params) {
         String key = params.getKey();
         String content = params.getContent();
         if (key == null || key.isEmpty()) {
@@ -38,7 +39,10 @@ public class HmacSM3Action extends AbstractEsbAction<HmacSM3Action.EncryptParam,
         }
         HMac hmac = SmUtil.hmacSm3(key.getBytes(StandardCharsets.UTF_8));
         String result = hmac.digestHex(content, StandardCharsets.UTF_8);
-        return WeaResult.success(result);
+
+        Map<String, Object> resultData = new HashMap<>(1);
+        resultData.put("result", result);
+        return WeaResult.success(resultData);
     }
 
     @Override

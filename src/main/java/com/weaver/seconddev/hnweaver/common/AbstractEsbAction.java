@@ -6,8 +6,7 @@ import com.weaver.common.base.entity.result.WeaResult;
 import com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Arrays;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -61,14 +60,37 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
 
     /**
      * 将 map 转换为 java 对象。<br>
-     * 注意，如果 Action 传入参数中包含 JSON 对象或数组，不可使用本方法进行转换，会导致报错，因为 JSON 对象或数组
-     * 在 Action 中会被转为字符串。
+     * 自动将第一层值为 JSON 字符串（以 {@code &#123;} 或 {@code &#91;} 开头）的参数
+     * 解析为 Map 或 List，再进行转换，避免 Action 中 JSON 对象/数组被转为字符串导致反序列化失败。
      *
      * @param params action 传入的参数
      * @param clazz  参数对象类型
      * @return 参数对象
      */
     protected static <T> T convertToParamObj(Map<String, Object> params, Class<T> clazz) {
-        return JSONObject.parseObject(JSONObject.toJSONString(params), clazz);
+        Map<String, Object> parsedParams = new HashMap<>(params.size());
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String && isJsonLike((String) value)) {
+                try {
+                    Object parsed = JSONObject.parse((String) value);
+                    parsedParams.put(entry.getKey(), parsed);
+                } catch (Exception e) {
+                    log.debug("参数 {} 的值不是有效 JSON，保留原始字符串", entry.getKey());
+                    parsedParams.put(entry.getKey(), value);
+                }
+            } else {
+                parsedParams.put(entry.getKey(), value);
+            }
+        }
+        return JSONObject.parseObject(JSONObject.toJSONString(parsedParams), clazz);
+    }
+
+    /**
+     * 判断字符串是否形似 JSON（以 {@code &#123;} 或 {@code &#91;} 开头）
+     */
+    private static boolean isJsonLike(String str) {
+        String trimmed = str.trim();
+        return trimmed.startsWith("{") || trimmed.startsWith("[");
     }
 }
