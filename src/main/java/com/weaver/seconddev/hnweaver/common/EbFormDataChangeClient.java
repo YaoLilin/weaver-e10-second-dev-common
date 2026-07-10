@@ -89,9 +89,10 @@ public class EbFormDataChangeClient {
             // 构建导入数据
             long buildStart = System.currentTimeMillis();
             dataList = formDataBuildHelper.buildDataList(formDataList, formId);
+            log.debug("构建导入数据完成，数据：{}", JSON.toJSONString(dataList));
             log.info("buildDataList 构建数据耗时：{}ms", System.currentTimeMillis() - buildStart);
             ebDataChangeReqDto.setDatas(dataList);
-            
+
             // 调用RPC接口保存数据
             long rpcStart = System.currentTimeMillis();
             EBDataChangeResult result = remoteSimpleDataService.saveFormData(ebDataChangeReqDto);
@@ -150,6 +151,7 @@ public class EbFormDataChangeClient {
             // 构建导入数据
             long buildStart = System.currentTimeMillis();
             dataList = formDataBuildHelper.buildDataList(formDataList, formId);
+            log.debug("构建导入数据完成，数据：{}", JSON.toJSONString(dataList));
             log.info("buildDataList 构建数据耗时：{}ms", System.currentTimeMillis() - buildStart);
 
             EBDataChangeReqDto ebDataChangeReqDto = getEBDataChangeReqDto(formDataId.toString(),operateUser);
