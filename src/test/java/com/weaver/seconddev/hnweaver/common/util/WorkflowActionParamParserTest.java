@@ -1,0 +1,178 @@
+package com.weaver.seconddev.hnweaver.common.util;
+
+import com.weaver.common.base.entity.result.WeaResult;
+import com.weaver.seconddev.hnweaver.common.AbstractEsbAction;
+import com.weaver.seconddev.hnweaver.common.constants.ActionParam;
+import com.weaver.seconddev.hnweaver.common.constants.ParamType;
+import com.weaver.seconddev.hnweaver.common.domain.dto.ActionParamDTO;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+/**
+ * WorkflowActionParamParser 单元测试<br>
+ * <p>
+ * 验证 AbstractEsbAction 子类能正确获取输入、输出参数类型，并通过解析器生成对应的参数结构。
+ * </p>
+ *
+ * @author 姚礼林
+ * @date 2026/7/9
+ */
+@DisplayName("WorkflowActionParamParser 参数类型解析测试")
+class WorkflowActionParamParserTest {
+
+    @Test
+    @DisplayName("AbstractEsbAction子类应当能获取输入和输出参数类型")
+    void shouldGetInputAndOutputTypesFromActionSubclass() {
+        DemoAction action = new DemoAction();
+
+        assertEquals(DemoInput.class, action.getParamType());
+        assertEquals(DemoOutput.class, action.getResultType());
+    }
+
+    @Test
+    @DisplayName("应当解析AbstractEsbAction子类的输入参数结构")
+    void shouldParseInputParamsFromActionSubclass() {
+        List<ActionParamDTO> inputParams = WorkflowActionParamParser.parseInputParams(DemoAction.class);
+
+        assertEquals(3, inputParams.size());
+
+        ActionParamDTO requestId = inputParams.get(0);
+        assertEquals("requestId", requestId.getName());
+        assertEquals("请求ID", requestId.getShowName());
+        assertEquals(ParamType.STRING, requestId.getType());
+
+        ActionParamDTO amount = inputParams.get(1);
+        assertEquals("amount", amount.getName());
+        assertEquals("amount", amount.getShowName());
+        assertEquals(ParamType.NUMBER, amount.getType());
+
+        ActionParamDTO detail = inputParams.get(2);
+        assertEquals("detail", detail.getName());
+        assertEquals("明细对象", detail.getShowName());
+        assertEquals(ParamType.OBJECT, detail.getType());
+        assertNotNull(detail.getChildren());
+        assertEquals(2, detail.getChildren().size());
+        assertEquals("code", detail.getChildren().get(0).getName());
+        assertEquals("detailName", detail.getChildren().get(1).getName());
+    }
+
+    @Test
+    @DisplayName("应当解析AbstractEsbAction子类的输出参数结构")
+    void shouldParseOutputParamsFromActionSubclass() {
+        List<ActionParamDTO> outputParams = WorkflowActionParamParser.parseOutputParams(DemoAction.class);
+
+        assertEquals(2, outputParams.size());
+
+        ActionParamDTO success = outputParams.get(0);
+        assertEquals("success", success.getName());
+        assertEquals(ParamType.BOOLEAN, success.getType());
+
+        ActionParamDTO resultItems = outputParams.get(1);
+        assertEquals("resultItems", resultItems.getName());
+        assertEquals("结果列表", resultItems.getShowName());
+        assertEquals(ParamType.ARRAY, resultItems.getType());
+        assertNotNull(resultItems.getChildren());
+        assertFalse(resultItems.getChildren().isEmpty());
+        assertEquals("itemCode", resultItems.getChildren().get(0).getName());
+    }
+
+    @Test
+    @DisplayName("无无参构造器的Action应当能解析输入和输出参数")
+    void shouldParseParamsWithoutInstantiatingAction() {
+        List<ActionParamDTO> inputParams = WorkflowActionParamParser.parseInputParams(RequiredArgumentAction.class);
+        List<ActionParamDTO> outputParams = WorkflowActionParamParser.parseOutputParams(RequiredArgumentAction.class);
+
+        assertEquals(1, inputParams.size());
+        assertEquals("input", inputParams.get(0).getName());
+        assertEquals(1, outputParams.size());
+        assertEquals("output", outputParams.get(0).getName());
+    }
+
+    /**
+     * 用于测试参数解析的示例 Action。
+     */
+    static class DemoAction extends AbstractEsbAction<DemoInput, DemoOutput> {
+
+        @Override
+        protected WeaResult<DemoOutput> doExecute(DemoInput params) {
+            return WeaResult.success(new DemoOutput());
+        }
+
+        @Override
+        protected DemoInput convertToParamObj(Map<String, Object> params) {
+            return new DemoInput();
+        }
+    }
+
+    /**
+     * 模拟依赖注入构造器的 Action。
+     */
+    static class RequiredArgumentAction extends AbstractEsbAction<RequiredArgumentInput, RequiredArgumentOutput> {
+        private final String dependency;
+
+        RequiredArgumentAction(String dependency) {
+            this.dependency = dependency;
+        }
+
+        @Override
+        protected WeaResult<RequiredArgumentOutput> doExecute(RequiredArgumentInput params) {
+            return WeaResult.success(new RequiredArgumentOutput());
+        }
+
+        @Override
+        protected RequiredArgumentInput convertToParamObj(Map<String, Object> params) {
+            return new RequiredArgumentInput();
+        }
+    }
+
+    /**
+     * 示例输入参数。
+     */
+    static class DemoInput {
+        @ActionParam(displayName = "请求ID", required = true)
+        private String requestId;
+        private Integer amount;
+        @ActionParam(displayName = "明细对象")
+        private DemoDetail detail;
+    }
+
+    /**
+     * 示例输出参数。
+     */
+    static class DemoOutput {
+        private Boolean success;
+        @ActionParam(displayName = "结果列表")
+        private List<DemoItem> resultItems;
+    }
+
+    static class RequiredArgumentInput {
+        private String input;
+    }
+
+    static class RequiredArgumentOutput {
+        private String output;
+    }
+
+    /**
+     * 示例嵌套对象。
+     */
+    static class DemoDetail {
+        private String code;
+        @ActionParam(displayName = "明细名称")
+        private String detailName;
+    }
+
+    /**
+     * 示例列表元素对象。
+     */
+    static class DemoItem {
+        private String itemCode;
+    }
+}

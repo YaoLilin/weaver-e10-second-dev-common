@@ -4,8 +4,11 @@ import cn.hutool.core.convert.Convert;
 import com.alibaba.fastjson.JSONObject;
 import com.weaver.common.base.entity.result.WeaResult;
 import com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface;
+import com.weaver.seconddev.hnweaver.common.util.EsbActionGenericTypeUtil;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,6 +24,42 @@ import java.util.stream.Collectors;
  **/
 @Slf4j
 public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteInterface {
+
+    /**
+     * 获取当前 Action 的第一个泛型参数类型。
+     *
+     * @return 参数泛型对应的 Class，无法解析时返回 null
+     */
+    public Class<?> getParamType() {
+        return EsbActionGenericTypeUtil.getParamClass(getActionClass());
+    }
+
+    /**
+     * 获取当前 Action 的第一个泛型参数完整类型。
+     *
+     * @return 参数泛型完整类型
+     */
+    public Type getParamGenericType() {
+        return EsbActionGenericTypeUtil.getParamType(getActionClass());
+    }
+
+    /**
+     * 获取当前 Action 的第二个泛型参数原始类型。
+     *
+     * @return 返回值泛型对应的原始 Class，无法解析时返回 null
+     */
+    public Class<?> getResultType() {
+        return EsbActionGenericTypeUtil.getResultClass(getActionClass());
+    }
+
+    /**
+     * 获取当前 Action 的第二个泛型参数完整类型。
+     *
+     * @return 返回值泛型完整类型
+     */
+    public Type getResultGenericType() {
+        return EsbActionGenericTypeUtil.getResultType(getActionClass());
+    }
 
     @Override
     public WeaResult<Map<String, Object>> execute(Map<String, Object> params) {
@@ -58,6 +97,11 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
      */
     protected abstract T convertToParamObj(Map<String, Object> params);
 
+    @SuppressWarnings("unchecked")
+    private Class<? extends AbstractEsbAction<?, ?>> getActionClass() {
+        return (Class<? extends AbstractEsbAction<?, ?>>) getClass();
+    }
+
     /**
      * 将 map 转换为 java 对象。<br>
      * 自动将第一层值为 JSON 字符串（以 {@code &#123;} 或 {@code &#91;} 开头）的参数
@@ -71,7 +115,8 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
         Map<String, Object> parsedParams = new HashMap<>(params.size());
         for (Map.Entry<String, Object> entry : params.entrySet()) {
             Object value = entry.getValue();
-            if (value instanceof String && isJsonLike((String) value)) {
+            if (value instanceof String && isJsonLike((String) value)
+                    && !isStringField(clazz, entry.getKey())) {
                 try {
                     Object parsed = JSONObject.parse((String) value);
                     parsedParams.put(entry.getKey(), parsed);
@@ -84,6 +129,26 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
             }
         }
         return JSONObject.parseObject(JSONObject.toJSONString(parsedParams), clazz);
+    }
+
+    /**
+     * 判断目标类中指定字段是否为 String 类型<br>
+     * <p>
+     * 若为 String 类型，则 JSON 字符串值应保留原始字符串不做自动解析，
+     * 避免如加密场景下原始 JSON 内容被重新序列化导致结果不一致。
+     * </p>
+     *
+     * @param clazz     目标类
+     * @param fieldName 字段名
+     * @return 如果字段存在且类型为 String 返回 true，否则返回 false
+     */
+    private static <T> boolean isStringField(Class<T> clazz, String fieldName) {
+        try {
+            Field field = clazz.getDeclaredField(fieldName);
+            return field.getType() == String.class;
+        } catch (NoSuchFieldException e) {
+            return false;
+        }
     }
 
     /**
