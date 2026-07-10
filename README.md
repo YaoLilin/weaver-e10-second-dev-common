@@ -140,6 +140,95 @@ public class MessagePushToWiseduHelpAction extends AbstractEsbAction<MessagePush
                group="HmacSM3Action" />
 ```
 
+### SM4EcbEncodeAction - SM4 ECB 加密 动作流 Action
+
+**路径**：`com.weaver.seconddev.hnweaver.common.encryption.SM4EcbEncodeAction`  
+**说明**：基于 SM4 算法的 ECB 模式对称加密实现，支持普通文本和 Hex 两种密钥格式，加密结果支持 Hex 和 Base64 两种输出格式。底层依赖 Hutool 的 `SmUtil.sm4()`。可与 E10 内置 `SM4ECBDecode` 函数配合使用。
+
+**功能**：
+
+- 密钥双模式：支持 TEXT（普通文本，补齐/截断至 16 字节）和 HEX（十六进制解码为 16 字节）两种密钥格式
+- 输出双格式：支持 HEX 十六进制和 Base64 两种输出格式
+- 参数校验：自动校验密钥和加密内容是否为空
+- 统一返回：继承 `AbstractEsbAction`，提供标准化的动作流返回格式
+- 国密支持：基于国家密码标准 SM4 算法，满足国产化要求
+
+**输入参数**：
+
+| 参数名 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `content` | String | 必填 | 待加密内容 |
+| `key` | String | 必填 | SM4 加密密钥 |
+| `keyType` | String | TEXT | 密钥类型：TEXT（普通文本）、HEX（十六进制） |
+| `outputFormat` | String | HEX | 输出结果类型：HEX（十六进制）、BASE64 |
+
+**使用示例**（E10 动作流调用参数）：
+```json
+{
+    "content": "{\"appId\":\"lgyy_zk\"}",
+    "key": "1a183bfdc4f98692c4819111cbe11dad",
+    "keyType": "HEX",
+    "outputFormat": "HEX"
+}
+```
+
+**返回结果**（动作流输出参数）：
+```json
+{
+    "result": "bda059fe202b0137bbe613669ba10a2e..."
+}
+```
+
+#### Action xml 文件配置
+```xml
+<dubbo:service ref="SM4EcbEncodeAction"
+               interface="com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface"
+               group="SM4EcbEncodeAction" />
+```
+
+### SM4EcbDecodeAction - SM4 ECB 解密 动作流 Action
+
+**路径**：`com.weaver.seconddev.hnweaver.common.encryption.SM4EcbDecodeAction`  
+**说明**：基于 SM4 算法的 ECB 模式对称解密实现，支持普通文本和 Hex 两种密钥格式，密文需为 Hex 编码字符串。底层依赖 Hutool 的 `SmUtil.sm4()`。可与 `SM4EcbEncodeAction` 或 E10 内置 `SM4ECBEncode` 函数配合使用。
+
+**功能**：
+
+- 密钥双模式：支持 TEXT（普通文本，补齐/截断至 16 字节）和 HEX（十六进制解码为 16 字节）两种密钥格式
+- 参数校验：自动校验密钥和密文是否为空
+- 统一返回：继承 `AbstractEsbAction`，提供标准化的动作流返回格式
+- 国密支持：基于国家密码标准 SM4 算法，满足国产化要求
+
+**输入参数**：
+
+| 参数名 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `content` | String | 必填 | Hex 编码的密文 |
+| `key` | String | 必填 | SM4 解密密钥 |
+| `keyType` | String | TEXT | 密钥类型：TEXT（普通文本）、HEX（十六进制） |
+
+**使用示例**（E10 动作流调用参数）：
+```json
+{
+    "content": "bda059fe202b0137bbe613669ba10a2e...",
+    "key": "1a183bfdc4f98692c4819111cbe11dad",
+    "keyType": "HEX"
+}
+```
+
+**返回结果**（动作流输出参数）：
+```json
+{
+    "result": "{\"appId\":\"lgyy_zk\"}"
+}
+```
+
+#### Action xml 文件配置
+```xml
+<dubbo:service ref="SM4EcbDecodeAction"
+               interface="com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface"
+               group="SM4EcbDecodeAction" />
+```
+
 ### EbFormDataChangeClient - EB 表单数据修改客户端
 
 **路径**：`com.weaver.seconddev.hnweaver.common.EbFormDataChangeClient`  

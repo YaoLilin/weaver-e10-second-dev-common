@@ -59,9 +59,16 @@ public class WorkflowInfoServiceImpl implements WorkflowInfoService {
 
     @Override
     public Optional<Long> getFormIdByRequestId(long requestId) {
-        String sql = "SELECT formid FROM wfc_form_data WHERE requestid = ?";
+        Optional<Long> workflowIdOp = getWorkflowIdByRequestId(requestId);
+        if (!workflowIdOp.isPresent()) {
+            log.warn("无法获取requestId {} 对应的workflowId，无法查询formId", requestId);
+            return Optional.empty();
+        }
+
+        Long workflowId = workflowIdOp.get();
+        String sql = "SELECT relatekey FROM wfp_relateform WHERE workflowid = ?";
         SqlExecuteResult result = sqlExecuteClient.executeSql(
-                DatasourceGroupType.WEAVER_WORKFLOW_LIST_SERVICE, sql, requestId);
+                DatasourceGroupType.WEAVER_WORKFLOW_LIST_SERVICE, sql, workflowId);
         if (!result.isSuccess()) {
             log.error("查询formId失败，sql：{}，错误信息：{}", sql, result.getMessage());
             return Optional.empty();
@@ -69,17 +76,52 @@ public class WorkflowInfoServiceImpl implements WorkflowInfoService {
 
         List<Map<String, Object>> records = result.getRecords();
         if (records.isEmpty()) {
-            log.warn("根据requestId {} 查询不到formId", requestId);
+            log.warn("根据workflowId {} 查询不到formId", workflowId);
             return Optional.empty();
         }
 
-        String formIdStr = SqlExecuteClient.getFieldValueIgnoreCase(records.get(0), "formid");
+        String formIdStr = SqlExecuteClient.getFieldValueIgnoreCase(records.get(0), "relatekey");
         if (CharSequenceUtil.isBlank(formIdStr)) {
-            log.warn("根据requestId {} 查询到的formId为空", requestId);
+            log.warn("根据workflowId {} 查询到的formId为空", workflowId);
             return Optional.empty();
         }
 
-        return Optional.of(Long.parseLong(formIdStr));
+        try {
+            return Optional.of(Long.parseLong(formIdStr));
+        } catch (NumberFormatException e) {
+            log.error("formId格式错误：{}", formIdStr, e);
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public Optional<Long> getWorkflowIdByRequestId(long requestId) {
+        String sql = "SELECT workflowid FROM wfc_requestbase WHERE requestid = ?";
+        SqlExecuteResult result = sqlExecuteClient.executeSql(
+                DatasourceGroupType.WEAVER_WORKFLOW_LIST_SERVICE, sql, requestId);
+        if (!result.isSuccess()) {
+            log.error("查询workflowId失败，sql：{}，错误信息：{}", sql, result.getMessage());
+            return Optional.empty();
+        }
+
+        List<Map<String, Object>> records = result.getRecords();
+        if (records.isEmpty()) {
+            log.warn("根据requestId {} 查询不到workflowId", requestId);
+            return Optional.empty();
+        }
+
+        String workflowIdStr = SqlExecuteClient.getFieldValueIgnoreCase(records.get(0), "workflowid");
+        if (CharSequenceUtil.isBlank(workflowIdStr)) {
+            log.warn("根据requestId {} 查询到的workflowId为空", requestId);
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(Long.parseLong(workflowIdStr));
+        } catch (NumberFormatException e) {
+            log.error("workflowId格式错误：{}", workflowIdStr, e);
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -101,4 +143,3 @@ public class WorkflowInfoServiceImpl implements WorkflowInfoService {
         return Optional.ofNullable(formEntityOp.get().getTableName());
     }
 }
-

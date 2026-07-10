@@ -31,6 +31,13 @@ public interface WorkflowInfoService {
      * @param requestId 流程请求ID
      * @return 流程定义ID，如果查询不到则返回Optional.empty()
      */
+    Optional<Long> getWorkflowIdByRequestId(long requestId);
+
+    /**
+     * 根据流程请求ID查询流程定义ID
+     *
+     * @param requestId 流程请求ID
+     * @return 流程定义ID，如果查询不到则返回Optional.empty()
+     */
     Optional<String> getFormTableNameByRequestId(long requestId);
 }
-
