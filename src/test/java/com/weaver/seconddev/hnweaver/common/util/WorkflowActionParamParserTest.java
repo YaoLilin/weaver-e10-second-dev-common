@@ -52,6 +52,7 @@ class WorkflowActionParamParserTest {
         assertEquals("amount", amount.getName());
         assertEquals("amount", amount.getShowName());
         assertEquals(ParamType.NUMBER, amount.getType());
+        assertEquals(Integer.class.getName(), amount.getJavaType());
 
         ActionParamDTO detail = inputParams.get(2);
         assertEquals("detail", detail.getName());
@@ -95,6 +96,22 @@ class WorkflowActionParamParserTest {
         assertEquals("output", outputParams.get(0).getName());
     }
 
+    @Test
+    @DisplayName("未标注的嵌套对象和对象列表应当解析子属性")
+    void shouldParseChildrenOfUnannotatedNestedFields() {
+        List<ActionParamDTO> inputParams = WorkflowActionParamParser.parseInputParams(UnannotatedNestedAction.class);
+
+        assertEquals(2, inputParams.size());
+        assertEquals("obj", inputParams.get(0).getName());
+        assertEquals(ParamType.OBJECT, inputParams.get(0).getType());
+        assertNotNull(inputParams.get(0).getChildren());
+        assertEquals("code", inputParams.get(0).getChildren().get(0).getName());
+        assertEquals("objs", inputParams.get(1).getName());
+        assertEquals(ParamType.ARRAY, inputParams.get(1).getType());
+        assertNotNull(inputParams.get(1).getChildren());
+        assertEquals("name", inputParams.get(1).getChildren().get(1).getName());
+    }
+
     /**
      * 用于测试参数解析的示例 Action。
      */
@@ -132,6 +149,18 @@ class WorkflowActionParamParserTest {
         }
     }
 
+    static class UnannotatedNestedAction extends AbstractEsbAction<UnannotatedNestedInput, DemoOutput> {
+        @Override
+        protected WeaResult<DemoOutput> doExecute(UnannotatedNestedInput params) {
+            return WeaResult.success(new DemoOutput());
+        }
+
+        @Override
+        protected UnannotatedNestedInput convertToParamObj(Map<String, Object> params) {
+            return new UnannotatedNestedInput();
+        }
+    }
+
     /**
      * 示例输入参数。
      */
@@ -158,6 +187,16 @@ class WorkflowActionParamParserTest {
 
     static class RequiredArgumentOutput {
         private String output;
+    }
+
+    static class UnannotatedNestedInput {
+        private NestedParam obj;
+        private List<NestedParam> objs;
+    }
+
+    static class NestedParam {
+        private String code;
+        private String name;
     }
 
     /**

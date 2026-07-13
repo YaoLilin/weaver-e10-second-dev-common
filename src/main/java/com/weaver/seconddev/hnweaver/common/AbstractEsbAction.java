@@ -1,13 +1,16 @@
 package com.weaver.seconddev.hnweaver.common;
 
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.text.CharSequenceUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.weaver.common.base.entity.result.WeaResult;
 import com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface;
+import com.weaver.seconddev.hnweaver.common.constants.ActionParam;
 import com.weaver.seconddev.hnweaver.common.util.EsbActionGenericTypeUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,6 +69,11 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
         log.debug("传入参数：{}", JSONObject.toJSONString(params));
         try {
             T paramObj = convertToParamObj(params);
+            String requiredParamError = validateRequiredParams(paramObj);
+            if (requiredParamError != null) {
+                log.warn("输入参数校验失败：{}", requiredParamError);
+                return WeaResult.fail(requiredParamError);
+            }
             WeaResult<R> result = doExecute(paramObj);
             if (result.isFail()) {
                 log.error("执行失败，错误信息：{}", result.getMsg());
@@ -96,6 +104,78 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
      * @return 参数对象
      */
     protected abstract T convertToParamObj(Map<String, Object> params);
+
+    private String validateRequiredParams(T paramObj) {
+        if (paramObj == null) {
+            return "输入参数不能为空";
+        }
+        return validateRequiredFields(paramObj, new IdentityHashMap<Object, Boolean>(), new ArrayList<String>());
+    }
+
+    private String validateRequiredFields(Object paramObj, Map<Object, Boolean> checkedObjects,
+                                          List<String> fieldPath) {
+        if (checkedObjects.put(paramObj, Boolean.TRUE) != null) {
+            return null;
+        }
+        for (Class<?> current = paramObj.getClass(); current != null && current != Object.class;
+             current = current.getSuperclass()) {
+            for (Field field : current.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
+                    continue;
+                }
+                String validationError = validateField(paramObj, field, checkedObjects, fieldPath);
+                if (validationError != null) {
+                    return validationError;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String validateField(Object paramObj, Field field, Map<Object, Boolean> checkedObjects,
+                                 List<String> fieldPath) {
+        try {
+            field.setAccessible(true);
+            Object value = field.get(paramObj);
+            List<String> currentPath = new ArrayList<String>(fieldPath);
+            currentPath.add(field.getName());
+            ActionParam annotation = field.getAnnotation(ActionParam.class);
+            if (annotation != null && annotation.required() && isRequiredValueEmpty(value)) {
+                return buildRequiredParamError(currentPath);
+            }
+            return validateNestedValue(value, checkedObjects, currentPath);
+        } catch (IllegalAccessException | SecurityException e) {
+            log.error("校验输入参数 {} 失败", field.getName(), e);
+            return "输入参数校验失败";
+        }
+    }
+
+    private String validateNestedValue(Object value, Map<Object, Boolean> checkedObjects, List<String> fieldPath) {
+        if (value == null || value instanceof CharSequence || value instanceof Number || value instanceof Boolean
+                || value instanceof Character || value instanceof Map || value.getClass().isEnum()
+                || value.getClass().getName().startsWith("java.")) {
+            return null;
+        }
+        if (value instanceof Iterable<?>) {
+            for (Object item : (Iterable<?>) value) {
+                String validationError = validateNestedValue(item, checkedObjects, fieldPath);
+                if (validationError != null) {
+                    return validationError;
+                }
+            }
+            return null;
+        }
+        return validateRequiredFields(value, checkedObjects, fieldPath);
+    }
+
+    private boolean isRequiredValueEmpty(Object value) {
+        return value == null || (value instanceof CharSequence
+                && CharSequenceUtil.isBlank((CharSequence) value));
+    }
+
+    private String buildRequiredParamError(List<String> fieldPath) {
+        return "[" + String.join("] > [", fieldPath) + "] 输入参数值不能为空";
+    }
 
     @SuppressWarnings("unchecked")
     private Class<? extends AbstractEsbAction<?, ?>> getActionClass() {

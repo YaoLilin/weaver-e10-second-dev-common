@@ -33,6 +33,11 @@ public class ActionParamDTO {
     private ParamType type;
 
     /**
+     * 参数 Java 原始类型全限定名
+     */
+    private String javaType;
+
+    /**
      * 默认值
      */
     private String defaultValue;

@@ -103,6 +103,59 @@ public class MessagePushToWiseduHelpAction extends AbstractEsbAction<MessagePush
 }
 ```
 
+#### Action 参数自动获取
+![auto_param.gif](files/auto_param.gif)
+
+继承 `AbstractEsbAction` 的 Action 可通过参数查询接口自动解析输入、输出参数，用于动作流参数配置页面自动填充参数表格。
+
+**使用要求**：
+
+- Action 必须使用 `@Service("ActionGroupId")` 声明 Bean 名称；`ActionGroupId` 即接口中的 `groupId`。
+- `AbstractEsbAction` 的输入、输出泛型必须为具体对象类型，不能使用 `Object`、`Map` 或未指定的泛型。
+- 可在字段上使用 `@ActionParam` 定义显示名称、描述、是否必填和默认值。
+- 支持普通字段、嵌套对象和 `List<对象>`；嵌套对象的字段会作为子参数返回。
+
+**参数定义示例**：
+```java
+@Service("ExampleAction")
+public class ExampleAction extends AbstractEsbAction<ExampleAction.InputParams, ExampleAction.OutputParams> {
+
+    @Data
+    public static class InputParams {
+        @ActionParam(required = true, displayName = "流程请求ID", desc = "流程请求记录ID")
+        private Long requestId;
+
+        @ActionParam(displayName = "明细数据", desc = "报销明细列表")
+        private List<DetailData> detailDataList;
+    }
+
+    @Data
+    public static class DetailData {
+        @ActionParam(required = true, displayName = "用户ID")
+        private Long userId;
+    }
+
+    @Data
+    public static class OutputParams {
+        @ActionParam(displayName = "处理结果")
+        private String result;
+    }
+}
+```
+
+**查询接口**：
+
+| 参数类型 | 请求地址 |
+|--------|----------|
+| 输入参数 | `GET /api/secondev/esb/action/params/input?groupId=ExampleAction` |
+| 输出参数 | `GET /api/secondev/esb/action/params/output?groupId=ExampleAction` |
+
+接口统一返回 `WeaResult`。参数项包含 `name`、`showName`、`required`、`type`、`javaType`、`defaultValue`、`desc` 和 `children`；`children` 用于表示嵌套对象或 List 对象的子参数。
+
+##### 在前端进行自动参数获取
+需要导入 `ecode` 文件夹内的 ecode 应用包到系统内，并发布，在动作流设计页面中就能自动获取 Action 参数。
+[动作流Action参数自动获取.zip](ecode/%E5%8A%A8%E4%BD%9C%E6%B5%81Action%E5%8F%82%E6%95%B0%E8%87%AA%E5%8A%A8%E8%8E%B7%E5%8F%96.zip)
+
 ### HmacSM3Action - HMAC-SM3 加密 动作流 Action
 
 **路径**：`com.weaver.seconddev.hnweaver.common.encryption.HmacSM3Action`  

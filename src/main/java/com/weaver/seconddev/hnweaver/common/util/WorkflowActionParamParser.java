@@ -21,11 +21,9 @@ import java.util.Map;
  * @author 姚礼林
  * @desc 动作流 Acton 参数解析工具类
  * 解析规则：
- * 1. 简单类型（String/数值/Boolean）与 List 字段默认作为参数；
- * 2. 标记 @ActionParam 的字段作为参数；
- * 3. 内嵌对象字段仅在标记 @ActionParam 时才解析其子字段；
- * 4. List<对象> 仅在字段标记 @ActionParam 时解析元素对象字段；
- * 5. Map/静态字段/合成字段不会被解析。
+ * 1. 简单类型（String/数值/Boolean）与 List 字段默认作为参数，List 的元素对象内的属性也会被解析为 Action 参数；
+ * 2. Map/静态字段/合成字段不会被解析。
+ * 3. 其它嵌套对象会解析为 Action 参数
  * @date 2026/1/15
  **/
 @Slf4j
@@ -103,9 +101,10 @@ public class WorkflowActionParamParser {
                 Class<?> fieldType = field.getType();
                 boolean isSimpleType = isSimpleType(fieldType);
                 boolean isList = List.class.isAssignableFrom(fieldType);
+                boolean isNestedObject = !isSimpleType && !isList && !Map.class.isAssignableFrom(fieldType);
 
-                // 简单类型、List 类型或被注解标记的字段才视为 Action 参数
-                if (isSimpleType || isList || isAnnotated) {
+                // 简单类型、List 类型、嵌套对象或被注解标记的字段才视为 Action 参数
+                if (isSimpleType || isList || isNestedObject || isAnnotated) {
                     // 设置注解属性
                     if (isAnnotated) {
                         // 显示名读取 ActionParam 注解中的 displayName 字段
@@ -124,6 +123,7 @@ public class WorkflowActionParamParser {
 
                     // 设置参数类型
                     dto.setType(getTypeValue(fieldType));
+                    dto.setJavaType(fieldType.getName());
 
                     // 处理嵌套对象或 List<T> 中的泛型参数
                     List<ActionParamDTO> children = parseNestedType(field);
@@ -151,7 +151,6 @@ public class WorkflowActionParamParser {
 
         // 如果是 List 类型，获取泛型参数
         if (List.class.isAssignableFrom(fieldType)) {
-            boolean isAnnotated = field.isAnnotationPresent(ActionParam.class);
             Type genericType = field.getGenericType();
             if (genericType instanceof ParameterizedType) {
                 ParameterizedType parameterizedType = (ParameterizedType) genericType;
@@ -159,7 +158,7 @@ public class WorkflowActionParamParser {
                 if (actualTypeArguments.length > 0 && actualTypeArguments[0] instanceof Class) {
                     Class<?> elementType = (Class<?>) actualTypeArguments[0];
                     // 如果泛型参数不是简单类型，则解析其字段
-                    if (isAnnotated && !isSimpleType(elementType) && !Map.class.isAssignableFrom(elementType)) {
+                    if (!isSimpleType(elementType) && !Map.class.isAssignableFrom(elementType)) {
                         return parseParams(elementType);
                     }
                 }
