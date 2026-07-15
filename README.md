@@ -43,7 +43,8 @@ if (!result.isSuccess()) {
 // 获取查询数据
 List<Map<String, Object>> records = result.getRecords();
 ```
-### AbstractEsbAction - ESB 动作流抽象类
+### 动作流 Action 扩展
+#### AbstractEsbAction - ESB 动作流抽象类
 
 **路径**：`com.weaver.seconddev.hnweaver.common.AbstractEsbAction`  
 **说明**：可实现此抽象类来替换标准的 `EsbServerlessRpcRemoteInterface` 接口，可明确传入参数和返回参数类型，
@@ -152,9 +153,21 @@ public class ExampleAction extends AbstractEsbAction<ExampleAction.InputParams, 
 
 接口统一返回 `WeaResult`。参数项包含 `name`、`showName`、`required`、`type`、`javaType`、`defaultValue`、`desc` 和 `children`；`children` 用于表示嵌套对象或 List 对象的子参数。
 
-##### 在前端进行自动参数获取
+**部署**：
 需要导入 `ecode` 文件夹内的 ecode 应用包到系统内，并发布，在动作流设计页面中就能自动获取 Action 参数。
 [动作流Action参数自动获取.zip](ecode/%E5%8A%A8%E4%BD%9C%E6%B5%81Action%E5%8F%82%E6%95%B0%E8%87%AA%E5%8A%A8%E8%8E%B7%E5%8F%96.zip)
+
+#### Action 信息说明页面
+你可以访问 `/sp/custom/1291641870251851777/index` 页面查看所有已部署的 ESB Action 信息，包括 Action 类名称和路径，Action 的说明
+以及输入和输出参数。
+要获取 Action 的说明，Action 类上必需使用 `@EsbAction` 注解来添加说明，要获取 Action 类的输入和输出参数，Action 类必需继承
+`AbstractEsbAction`,并在范型参数中定义具体的非 Map 对象类型。
+
+![img23235.png](files/img23235.png)
+
+**部署**：
+需要部署 E-Code 应用包才可以访问 Action 信息说明页面，将该应用包导入到系统中并发布。
+[动作流Action说明页面.zip](ecode/%E5%8A%A8%E4%BD%9C%E6%B5%81Action%E8%AF%B4%E6%98%8E%E9%A1%B5%E9%9D%A2.zip)
 
 ### HmacSM3Action - HMAC-SM3 加密 动作流 Action
 

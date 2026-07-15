@@ -2,6 +2,7 @@ package com.weaver.seconddev.hnweaver.common.controller;
 
 import com.weaver.common.base.entity.result.WeaResult;
 import com.weaver.seconddev.hnweaver.common.AbstractEsbAction;
+import com.weaver.seconddev.hnweaver.common.constants.EsbAction;
 import com.weaver.seconddev.hnweaver.common.domain.dto.ActionParamDTO;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,7 @@ class WorkflowActionParamControllerTest {
         doReturn(TestAction.class).when(beanFactory).getType(ACTION_GROUP_ID);
     }
 
+    @EsbAction(value = ACTION_GROUP_ID, desc = "<p>测试 Action 描述</p>")
     public static class TestAction extends AbstractEsbAction<InputParam, OutputParam> {
         @Override
         protected WeaResult<OutputParam> doExecute(InputParam params) {
