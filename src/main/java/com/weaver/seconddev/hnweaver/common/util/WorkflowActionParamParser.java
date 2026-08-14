@@ -22,7 +22,7 @@ import java.util.Map;
  * @desc 动作流 Acton 参数解析工具类
  * 解析规则：
  * 1. 简单类型（String/数值/Boolean）与 List 字段默认作为参数，List 的元素对象内的属性也会被解析为 Action 参数；
- * 2. Map/静态字段/合成字段不会被解析。
+ * 2. Map 字段作为对象参数解析，不解析其键和值类型；静态字段和合成字段不会被解析。
  * 3. 其它嵌套对象会解析为 Action 参数
  * @date 2026/1/15
  **/
@@ -78,7 +78,7 @@ public class WorkflowActionParamParser {
      * @param paramType 参数类型
      * @return 参数列表
      */
-    private static List<ActionParamDTO> parseParams(Class<?> paramType) {
+    public static List<ActionParamDTO> parseParams(Class<?> paramType) {
         List<ActionParamDTO> result = new ArrayList<>();
         if (paramType == null) {
             return result;
@@ -101,10 +101,11 @@ public class WorkflowActionParamParser {
                 Class<?> fieldType = field.getType();
                 boolean isSimpleType = isSimpleType(fieldType);
                 boolean isList = List.class.isAssignableFrom(fieldType);
-                boolean isNestedObject = !isSimpleType && !isList && !Map.class.isAssignableFrom(fieldType);
+                boolean isMap = Map.class.isAssignableFrom(fieldType);
+                boolean isNestedObject = !isSimpleType && !isList && !isMap;
 
-                // 简单类型、List 类型、嵌套对象或被注解标记的字段才视为 Action 参数
-                if (isSimpleType || isList || isNestedObject || isAnnotated) {
+                // 简单类型、List、Map、嵌套对象或被注解标记的字段才视为 Action 参数
+                if (isSimpleType || isList || isMap || isNestedObject || isAnnotated) {
                     // 设置注解属性
                     if (isAnnotated) {
                         // 显示名读取 ActionParam 注解中的 displayName 字段
@@ -121,9 +122,11 @@ public class WorkflowActionParamParser {
                         dto.setRequired(false);
                     }
 
-                    // 设置参数类型
-                    dto.setType(getTypeValue(fieldType));
-                    dto.setJavaType(fieldType.getName());
+                    // List 参数使用元素类型作为参数类型，数组属性单独标识
+                    Class<?> valueType = isList ? getListElementType(field) : fieldType;
+                    dto.setType(getTypeValue(valueType));
+                    dto.setJavaType(valueType.getName());
+                    dto.setArray(isList);
 
                     // 处理嵌套对象或 List<T> 中的泛型参数
                     List<ActionParamDTO> children = parseNestedType(field);
@@ -174,10 +177,30 @@ public class WorkflowActionParamParser {
         return null;
     }
 
+    /**
+     * 获取 List 字段的元素类型。<br>
+     * <p>
+     * 未声明或无法解析泛型时按 Object 处理，使前端以 JSON 数组展示。
+     * </p>
+     *
+     * @param field List 类型字段
+     * @return List 元素类型
+     */
+    private static Class<?> getListElementType(Field field) {
+        Type genericType = field.getGenericType();
+        if (genericType instanceof ParameterizedType) {
+            Type[] actualTypeArguments = ((ParameterizedType) genericType).getActualTypeArguments();
+            if (actualTypeArguments.length > 0 && actualTypeArguments[0] instanceof Class) {
+                return (Class<?>) actualTypeArguments[0];
+            }
+        }
+        return Object.class;
+    }
+
     private static boolean shouldSkip(Field field) {
         int modifiers = field.getModifiers();
-        // 排除静态字段、合成字段和Map类型
-        return Modifier.isStatic(modifiers) || field.isSynthetic() || Map.class.isAssignableFrom(field.getType());
+        // 排除静态字段和合成字段
+        return Modifier.isStatic(modifiers) || field.isSynthetic();
     }
 
     private static boolean isSimpleType(Class<?> type) {
@@ -192,14 +215,11 @@ public class WorkflowActionParamParser {
         if (type == Integer.class || type == int.class ||
                 type == Double.class || type == double.class ||
                 type == Float.class || type == float.class ||
-                type == Long.class || type == long.class ||
                 type == BigDecimal.class) {
             return ParamType.NUMBER;
         } else if (type == Boolean.class || type == boolean.class) {
             return ParamType.BOOLEAN;
-        } else if (List.class.isAssignableFrom(type)) {
-            return ParamType.ARRAY;
-        } else if (!isSimpleType(type) && !Map.class.isAssignableFrom(type)) {
+        } else if (!isSimpleType(type)) {
             return ParamType.OBJECT;
         }
         return ParamType.STRING;

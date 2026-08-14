@@ -33,6 +33,14 @@ public class ActionParamDTO {
     private ParamType type;
 
     /**
+     * 是否数组类型<br>
+     * <p>
+     * List 参数会根据元素类型返回对应的 {@link #type}，并通过此字段标识为数组。
+     * </p>
+     */
+    private Boolean array;
+
+    /**
      * 参数 Java 原始类型全限定名
      */
     private String javaType;
