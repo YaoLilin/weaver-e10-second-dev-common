@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * 全局异常处理器，仅作用于 com.weaver.seconddev.hnweaver 包下的 Controller
+ * @author yaolilin
  */
 @RestControllerAdvice(basePackages = "com.weaver.seconddev.hnweaver")
 @Slf4j
@@ -18,11 +19,11 @@ public class GlobalExceptionHandler {
     public WeaResult<String> handleException(Exception ex) {
         log.error("接口发生异常:{}",ex.getMessage(), ex);
         if (ex instanceof ApiExceptionMsgInterface) {
-            return WeaResult.fail("系统异常：" + ex.getMessage());
+            return WeaResult.fail("系统异常：" + ex.getMessage(), ex);
         } else if (ex instanceof MissingServletRequestParameterException) {
-            return WeaResult.fail("缺少参数：" + ex.getMessage());
+            return WeaResult.fail("缺少参数：" + ex.getMessage(), ex);
         }
 
-        return WeaResult.fail("系统发生异常");
+        return WeaResult.fail("系统发生异常", ex);
     }
 }

@@ -53,6 +53,7 @@ public class SqlExecuteClient {
         Map<String, Object> result = dataSetUtil.executeSqlWithTrans(SourceType.LOGIC, groupType.getId(),
                 sql, paramEntities, "", false, false, false);
         log.debug("执行结果：{}", JSON.toJSONString(result));
+        @SuppressWarnings("unchecked")
         WeaResult<Map<String, Object>> apiResult = JSON.toJavaObject(new JSONObject(result), WeaResult.class);
         if (apiResult.isFail()) {
             SqlExecuteResult executeResult = new SqlExecuteResult();
