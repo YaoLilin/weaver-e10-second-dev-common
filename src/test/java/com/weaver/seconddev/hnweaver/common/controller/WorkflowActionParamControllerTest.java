@@ -15,9 +15,7 @@ import org.springframework.beans.factory.ListableBeanFactory;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
@@ -59,8 +57,10 @@ class WorkflowActionParamControllerTest {
         WeaResult<List<ActionParamDTO>> result = controller.getOutputParams(ACTION_GROUP_ID);
 
         assertNotNull(result.getData());
-        assertEquals(1, result.getData().size());
+        assertEquals(3, result.getData().size());
         assertEquals("output", result.getData().get(0).getName());
+        assertTrue(result.getData().stream().anyMatch(param -> "success".equals(param.getName())));
+        assertTrue(result.getData().stream().anyMatch(param -> "msg".equals(param.getName())));
     }
 
     @Test

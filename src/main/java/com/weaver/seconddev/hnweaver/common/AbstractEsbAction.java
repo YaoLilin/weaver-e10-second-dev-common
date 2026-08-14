@@ -4,21 +4,25 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.weaver.common.base.entity.result.WeaResult;
+import com.weaver.common.base.enumeration.result.WeaResultCodeEnum;
 import com.weaver.esb.api.rpc.EsbServerlessRpcRemoteInterface;
 import com.weaver.seconddev.hnweaver.common.constants.ActionParam;
 import com.weaver.seconddev.hnweaver.common.util.EsbActionGenericTypeUtil;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 动作流 Action 抽象类，可明确传入参数和返回参数类型，替换原来的 Map 形式，并支持校验必填参数。
  *
- * @param <T> 参数类型，由 convertToParamObj 将 Map 转换为此类型的对象
+ * @param <T> 参数类型，必需能转为 Map ，不能为基本类型对象，由 convertToParamObj 将 Map 转换为此类型的对象
  * @param <R> 返回数据类型，不能为基本类型包装对象（如 String、Long 等），
  *          必需能通过 Convert.toMap() 转换为 Map&lt;String, Object&gt;，
  *          推荐使用 Java Bean 或 Map 子类
@@ -64,6 +68,30 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
         return EsbActionGenericTypeUtil.getResultType(getActionClass());
     }
 
+    /**
+     * 获取 Action 返回数据的基础实体类类型
+     *
+     * @return 基础实体类类型
+     */
+    public static Class<?> getBaseDataType(){
+        return BaseData.class;
+    }
+
+    /**
+     * Action 返回数据的基础实体类，包含了 Action 都要返回的数据
+     */
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class BaseData{
+        @ActionParam(displayName = "是否成功")
+        private boolean success;
+        @ActionParam(displayName = "返回消息", desc = "成功或失败信息")
+        private String msg;
+    }
+
+    private T param;
+
     @Override
     public WeaResult<Map<String, Object>> execute(Map<String, Object> params) {
         log.debug("传入参数：{}", JSONObject.toJSONString(params));
@@ -72,21 +100,38 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
             String requiredParamError = validateRequiredParams(paramObj);
             if (requiredParamError != null) {
                 log.warn("输入参数校验失败：{}", requiredParamError);
-                return WeaResult.fail(requiredParamError);
+                return fail(requiredParamError, null);
             }
+            this.param = paramObj;
             WeaResult<R> result = doExecute(paramObj);
             if (result.isFail()) {
                 log.error("执行失败，错误信息：{}", result.getMsg());
-                return WeaResult.fail(result.getMsg());
+                return fail(result.getMsg(), null);
             }
+
             log.info("执行成功，结果：{}", JSONObject.toJSONString(result));
-            return WeaResult.success(Convert.toMap(String.class, Object.class, result.getData()));
+            return success(result);
         } catch (Exception e) {
             log.error("执行失败", e);
-            return WeaResult.fail("执行失败:" + e.getMessage()+";\n stacks:"+
-                    Arrays.stream(e.getStackTrace()).map(StackTraceElement::toString).
-                            collect(Collectors.joining("\n")));
+            return fail("执行失败:" + e.getMessage(), e);
         }
+    }
+
+    private static <R> @NotNull WeaResult<Map<String ,Object>> success(WeaResult<R> result) {
+        Map<String, Object> resultMap = Convert.toMap(String.class, Object.class, result.getData());
+        BaseData baseData = new BaseData(true, result.getMsg());
+        Map<String, Object> baseDataMap = Convert.toMap(String.class, Object.class, baseData);
+        resultMap.putAll(baseDataMap);
+        return WeaResult.success(resultMap);
+    }
+
+    private static @NotNull WeaResult<Map<String, Object>> fail(String errorMsg ,Exception e) {
+        BaseData baseData = new BaseData(false, errorMsg);
+        Map<String, Object> map = Convert.toMap(String.class, Object.class, baseData);
+        if (e == null) {
+            return WeaResult.fail(WeaResultCodeEnum.ERROR.getCode(), errorMsg, map, true);
+        }
+        return  WeaResult.fail(WeaResultCodeEnum.ERROR.getCode(), errorMsg, map, e);
     }
 
     /**
@@ -95,6 +140,7 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
      * @param params 参数
      * @return 执行结果
      */
+    @NotNull
     protected abstract WeaResult<R> doExecute(T params);
 
     /**
@@ -103,13 +149,22 @@ public abstract class AbstractEsbAction <T,R> implements EsbServerlessRpcRemoteI
      * @param params action 传入的参数
      * @return 参数对象
      */
+    @NotNull
     protected abstract T convertToParamObj(Map<String, Object> params);
+
+    /**
+     * 需要先执行 {@code doExecute()} 方法才能获取参数
+     * @return 传入参数
+     */
+    protected T getParam() {
+        return this.param;
+    }
 
     private String validateRequiredParams(T paramObj) {
         if (paramObj == null) {
             return "输入参数不能为空";
         }
-        return validateRequiredFields(paramObj, new IdentityHashMap<Object, Boolean>(), new ArrayList<String>());
+        return validateRequiredFields(paramObj, new IdentityHashMap<>(), new ArrayList<>());
     }
 
     private String validateRequiredFields(Object paramObj, Map<Object, Boolean> checkedObjects,

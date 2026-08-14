@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author 姚礼林
@@ -41,7 +44,7 @@ public class EsbActionParamController {
     public WeaResult<List<ActionParamDTO>> getInputParams(@RequestParam("groupId") String groupId) {
         Class<? extends AbstractEsbAction<?, ?>> actionClass = getActionClass(groupId);
         if (actionClass == null) {
-            return WeaResult.fail("未找到对应的 AbstractEsbAction：" + groupId);
+            return WeaResult.fail("未找到对应的 AbstractEsbAction：" + groupId, true);
         }
         return WeaResult.success(WorkflowActionParamParser.parseInputParams(actionClass));
     }
@@ -56,9 +59,23 @@ public class EsbActionParamController {
     public WeaResult<List<ActionParamDTO>> getOutputParams(@RequestParam("groupId") String groupId) {
         Class<? extends AbstractEsbAction<?, ?>> actionClass = getActionClass(groupId);
         if (actionClass == null) {
-            return WeaResult.fail("未找到对应的 AbstractEsbAction：" + groupId);
+            return WeaResult.fail("未找到对应的 AbstractEsbAction：" + groupId, true);
         }
-        return WeaResult.success(WorkflowActionParamParser.parseOutputParams(actionClass));
+        List<ActionParamDTO> outputParams = new ArrayList<>(WorkflowActionParamParser.parseOutputParams(actionClass));
+        appendBaseDataParams(outputParams);
+        return WeaResult.success(outputParams);
+    }
+
+    /**
+     * 追加 Action 执行结果始终包含的基础数据参数。<br>
+     * 输出结果类已定义同名字段时不重复添加。
+     *
+     * @param outputParams 已解析的 Action 输出参数
+     */
+    private void appendBaseDataParams(List<ActionParamDTO> outputParams) {
+        Set<String> outputParamNames = outputParams.stream().map(ActionParamDTO::getName).collect(Collectors.toSet());
+        List<ActionParamDTO> baseDataParams = WorkflowActionParamParser.parseParams(AbstractEsbAction.getBaseDataType());
+        baseDataParams.stream().filter(param -> !outputParamNames.contains(param.getName())).forEach(outputParams::add);
     }
 
     @SuppressWarnings("unchecked")

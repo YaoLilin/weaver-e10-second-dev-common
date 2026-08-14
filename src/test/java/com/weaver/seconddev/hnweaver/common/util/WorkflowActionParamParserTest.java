@@ -11,9 +11,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * WorkflowActionParamParser 单元测试<br>
@@ -41,7 +39,7 @@ class WorkflowActionParamParserTest {
     void shouldParseInputParamsFromActionSubclass() {
         List<ActionParamDTO> inputParams = WorkflowActionParamParser.parseInputParams(DemoAction.class);
 
-        assertEquals(3, inputParams.size());
+        assertEquals(6, inputParams.size());
 
         ActionParamDTO requestId = inputParams.get(0);
         assertEquals("requestId", requestId.getName());
@@ -62,6 +60,24 @@ class WorkflowActionParamParserTest {
         assertEquals(2, detail.getChildren().size());
         assertEquals("code", detail.getChildren().get(0).getName());
         assertEquals("detailName", detail.getChildren().get(1).getName());
+
+        ActionParamDTO names = inputParams.get(3);
+        assertEquals("names", names.getName());
+        assertEquals(ParamType.STRING, names.getType());
+        assertEquals(String.class.getName(), names.getJavaType());
+        assertEquals(Boolean.TRUE, names.getArray());
+
+        ActionParamDTO scores = inputParams.get(4);
+        assertEquals("scores", scores.getName());
+        assertEquals(ParamType.NUMBER, scores.getType());
+        assertEquals(Double.class.getName(), scores.getJavaType());
+        assertEquals(Boolean.TRUE, scores.getArray());
+
+        ActionParamDTO recordIds = inputParams.get(5);
+        assertEquals("recordIds", recordIds.getName());
+        assertEquals(ParamType.STRING, recordIds.getType());
+        assertEquals(Long.class.getName(), recordIds.getJavaType());
+        assertEquals(Boolean.TRUE, recordIds.getArray());
     }
 
     @Test
@@ -78,7 +94,8 @@ class WorkflowActionParamParserTest {
         ActionParamDTO resultItems = outputParams.get(1);
         assertEquals("resultItems", resultItems.getName());
         assertEquals("结果列表", resultItems.getShowName());
-        assertEquals(ParamType.ARRAY, resultItems.getType());
+        assertEquals(ParamType.OBJECT, resultItems.getType());
+        assertEquals(Boolean.TRUE, resultItems.getArray());
         assertNotNull(resultItems.getChildren());
         assertFalse(resultItems.getChildren().isEmpty());
         assertEquals("itemCode", resultItems.getChildren().get(0).getName());
@@ -107,9 +124,34 @@ class WorkflowActionParamParserTest {
         assertNotNull(inputParams.get(0).getChildren());
         assertEquals("code", inputParams.get(0).getChildren().get(0).getName());
         assertEquals("objs", inputParams.get(1).getName());
-        assertEquals(ParamType.ARRAY, inputParams.get(1).getType());
+        assertEquals(ParamType.OBJECT, inputParams.get(1).getType());
+        assertEquals(Boolean.TRUE, inputParams.get(1).getArray());
         assertNotNull(inputParams.get(1).getChildren());
         assertEquals("name", inputParams.get(1).getChildren().get(1).getName());
+    }
+
+    @Test
+    @DisplayName("Map类型输入参数应当解析为对象且不解析键值类型")
+    void shouldParseMapInputParamAsObjectWithoutChildren() {
+        List<ActionParamDTO> inputParams = WorkflowActionParamParser.parseInputParams(MapInputAction.class);
+
+        assertEquals(1, inputParams.size());
+        ActionParamDTO attributes = inputParams.get(0);
+        assertEquals("attributes", attributes.getName());
+        assertEquals(ParamType.OBJECT, attributes.getType());
+        assertEquals(Map.class.getName(), attributes.getJavaType());
+        assertNull(attributes.getChildren());
+    }
+
+    @Test
+    @DisplayName("Long类型输入参数应当解析为文本")
+    void shouldParseLongInputParamAsString() {
+        List<ActionParamDTO> inputParams = WorkflowActionParamParser.parseInputParams(LongInputAction.class);
+
+        assertEquals(1, inputParams.size());
+        assertEquals("recordId", inputParams.get(0).getName());
+        assertEquals(ParamType.STRING, inputParams.get(0).getType());
+        assertEquals(Long.class.getName(), inputParams.get(0).getJavaType());
     }
 
     /**
@@ -161,6 +203,30 @@ class WorkflowActionParamParserTest {
         }
     }
 
+    static class MapInputAction extends AbstractEsbAction<MapInput, DemoOutput> {
+        @Override
+        protected WeaResult<DemoOutput> doExecute(MapInput params) {
+            return WeaResult.success(new DemoOutput());
+        }
+
+        @Override
+        protected MapInput convertToParamObj(Map<String, Object> params) {
+            return new MapInput();
+        }
+    }
+
+    static class LongInputAction extends AbstractEsbAction<LongInput, DemoOutput> {
+        @Override
+        protected WeaResult<DemoOutput> doExecute(LongInput params) {
+            return WeaResult.success(new DemoOutput());
+        }
+
+        @Override
+        protected LongInput convertToParamObj(Map<String, Object> params) {
+            return new LongInput();
+        }
+    }
+
     /**
      * 示例输入参数。
      */
@@ -170,6 +236,9 @@ class WorkflowActionParamParserTest {
         private Integer amount;
         @ActionParam(displayName = "明细对象")
         private DemoDetail detail;
+        private List<String> names;
+        private List<Double> scores;
+        private List<Long> recordIds;
     }
 
     /**
@@ -192,6 +261,14 @@ class WorkflowActionParamParserTest {
     static class UnannotatedNestedInput {
         private NestedParam obj;
         private List<NestedParam> objs;
+    }
+
+    static class MapInput {
+        private Map<String, NestedParam> attributes;
+    }
+
+    static class LongInput {
+        private Long recordId;
     }
 
     static class NestedParam {
