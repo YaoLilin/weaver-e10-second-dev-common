@@ -222,7 +222,7 @@ public abstract class AbstractEsbAction<T, R> implements EsbServerlessRpcRemoteI
         try {
             field.setAccessible(true);
             Object value = field.get(paramObj);
-            List<String> currentPath = new ArrayList<String>(fieldPath);
+            List<String> currentPath = new ArrayList<>(fieldPath);
             currentPath.add(field.getName());
             ActionParam annotation = field.getAnnotation(ActionParam.class);
             if (annotation != null && annotation.required() && isRequiredValueEmpty(value)) {
